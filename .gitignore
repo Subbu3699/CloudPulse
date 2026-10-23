@@ -1,0 +1,23 @@
+# Secrets and environment files
+.env
+.env.*
+!.env.example
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend
+node_modules/
+dist/
+.vite/
+
+# Local tools and logs
+.vscode/
+.idea/
+*.log
