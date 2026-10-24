@@ -86,3 +86,28 @@ def test_inactive_apis_are_not_queued_and_state_is_cleared():
     queue_task.assert_not_called()
     assert 7 not in scheduler_module._last_dispatch_times
     db.close.assert_called_once()
+
+def test_failed_dispatch_can_be_retried():
+    api = make_api(1, interval=60)
+    db = setup_db([api])
+    scheduler_module._last_dispatch_times.clear()
+
+    with (
+        patch.object(scheduler_module, "SessionLocal", return_value=db),
+        patch.object(
+            scheduler_module.check_monitored_api,
+            "delay",
+            side_effect=[RuntimeError("Redis temporarily unavailable"), Mock()],
+        ) as queue_task,
+        patch.object(scheduler_module.time, "monotonic", side_effect=[100.0, 200.0, 200.1]),
+    ):
+        scheduler_module.check_all_active_apis()
+
+        # Failed dispatch should not record a successful dispatch time.
+        assert 1 not in scheduler_module._last_dispatch_times
+
+        scheduler_module.check_all_active_apis()
+
+    assert queue_task.call_count == 2
+    assert scheduler_module._last_dispatch_times[1] == 200.1
+    assert db.close.call_count == 2

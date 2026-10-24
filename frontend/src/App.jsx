@@ -7,10 +7,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   Clock,
+  Pencil,
   Plus,
   RefreshCw,
   Server,
   ShieldCheck,
+  Trash2,
   XCircle,
 } from "lucide-react";
 import {
@@ -36,6 +38,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [checkingId, setCheckingId] = useState(null);
   const [form, setForm] = useState({
     name: "",
@@ -123,27 +126,72 @@ function App() {
     (incident) => incident.status === "open"
   );
 
-  const visibleChecks = checks
-    .filter(
-      (check) =>
-        selectedApi === "all" ||
-        String(check.api_id) === selectedApi
-    )
-    .slice(-30);
+
+const visibleChecks = checks
+  .filter(
+    (check) =>
+      selectedApi === "all" ||
+      String(check.api_id) === selectedApi
+  )
+  .slice(-30);
+
+const chartApis =
+  selectedApi === "all"
+    ? apis.filter((api) =>
+        visibleChecks.some((check) => check.api_id === api.id)
+      )
+    : apis.filter((api) => String(api.id) === selectedApi);
+
+
+  const chartData = visibleChecks.map((check) => {
+    const point = { ...check };
+
+    chartApis.forEach((api) => {
+      point[`api_${api.id}`] =
+        check.api_id === api.id
+          ? check.response_time_ms
+          : null;
+    });
+
+    return point;
+  });
+
+
+
+  function editApi(api) {
+    setEditingId(api.id);
+    setForm({
+      name: api.name,
+      url: api.url,
+      method: api.method,
+      check_interval_seconds: api.check_interval_seconds,
+      timeout_seconds: api.timeout_seconds,
+    });
+    setShowForm(true);
+    setError("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   async function createApi(event) {
     event.preventDefault();
 
+    const payload = {
+      ...form,
+      check_interval_seconds: Number(form.check_interval_seconds),
+      timeout_seconds: Number(form.timeout_seconds),
+    };
+
     try {
-      await API.post("/api/v1/monitored-apis", {
-        ...form,
-        check_interval_seconds: Number(
-          form.check_interval_seconds
-        ),
-        timeout_seconds: Number(form.timeout_seconds),
-      });
+      setError("");
+
+      if (editingId !== null) {
+        await API.put(`/api/v1/monitored-apis/${editingId}`, payload);
+      } else {
+        await API.post("/api/v1/monitored-apis", payload);
+      }
 
       setShowForm(false);
+      setEditingId(null);
       setForm({
         name: "",
         url: "",
@@ -155,7 +203,10 @@ function App() {
       await loadDashboard();
     } catch (err) {
       setError(
-        err.response?.data?.detail || "Could not create the API."
+        err.response?.data?.detail ||
+          (editingId !== null
+            ? "Could not update the API."
+            : "Could not create the API.")
       );
     }
   }
@@ -174,6 +225,24 @@ function App() {
       );
     } finally {
       setCheckingId(null);
+    }
+  }
+
+  async function deleteApi(apiId, apiName) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${apiName}"?`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setError("");
+      await API.delete(`/api/v1/monitored-apis/${apiId}`);
+      await loadDashboard();
+    } catch (err) {
+      setError(
+        err.response?.data?.detail || "Failed to delete the API."
+      );
     }
   }
 
@@ -236,7 +305,23 @@ function App() {
             </button>
             <button
               className="button primary"
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => {
+                if (showForm) {
+                  setShowForm(false);
+                  setEditingId(null);
+                } else {
+                  setEditingId(null);
+                  setForm({
+                    name: "",
+                    url: "",
+                    method: "GET",
+                    check_interval_seconds: 60,
+                    timeout_seconds: 10,
+                  });
+                  setError("");
+                  setShowForm(true);
+                }
+              }}
             >
               <Plus size={17} /> Add API
             </button>
@@ -255,12 +340,19 @@ function App() {
           <section className="panel form-panel">
             <div className="panel-heading">
               <div>
-                <h2>Add monitored API</h2>
-                <p>Register an endpoint for monitoring.</p>
+                <h2>{editingId !== null ? "Edit monitored API" : "Add monitored API"}</h2>
+                <p>
+                  {editingId !== null
+                    ? "Update this endpoint's monitoring settings."
+                    : "Register an endpoint for monitoring."}
+                </p>
               </div>
               <button
                 className="icon-button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setEditingId(null);
+                }}
               >
                 ✕
               </button>
@@ -341,7 +433,7 @@ function App() {
               </label>
 
               <button className="button primary" type="submit">
-                Create monitored API
+                {editingId !== null ? "Save Changes" : "Create monitored API"}
               </button>
             </form>
           </section>
@@ -413,9 +505,9 @@ function App() {
             </div>
 
             <div className="chart-container">
-              {visibleChecks.length ? (
+              {visibleChecks.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={visibleChecks}>
+                  <LineChart data={chartData}>
                     <CartesianGrid
                       strokeDasharray="3 3"
                       stroke="#e8edf4"
@@ -433,26 +525,41 @@ function App() {
                     />
                     <YAxis
                       tick={{ fill: "#7c879a", fontSize: 11 }}
+                      tickCount={5}
+                      domain={[0, "auto"]}
                       unit=" ms"
-                      width={65}
+                      width={75}
                     />
                     <Tooltip
                       labelFormatter={(value) =>
                         new Date(value).toLocaleString()
                       }
-                      formatter={(value) => [
-                        `${value} ms`,
-                        "Response time",
+                      formatter={(value, name) => [
+                        `${Number(value).toFixed(2)} ms`,
+                        name,
                       ]}
                     />
-                    <Line
-                      type="monotone"
-                      dataKey="response_time_ms"
-                      stroke="#4f6bed"
-                      strokeWidth={2.5}
-                      dot={false}
-                      activeDot={{ r: 5 }}
-                    />
+                    {chartApis.map((api, index) => (
+                      <Line
+                        key={api.id}
+                        type="monotone"
+                        dataKey={`api_${api.id}`}
+                        name={api.name}
+                        stroke={
+                          [
+                            "#4f6bed",
+                            "#16a085",
+                            "#e67e22",
+                            "#9b59b6",
+                            "#e74c3c",
+                          ][index % 5]
+                        }
+                        strokeWidth={2.5}
+                        dot={false}
+                        activeDot={{ r: 5 }}
+                        connectNulls={true}
+                      />
+                    ))}
                   </LineChart>
                 </ResponsiveContainer>
               ) : (
@@ -586,6 +693,13 @@ function App() {
                       <td>{api.check_interval_seconds}s</td>
                       <td>
                         <button
+                          type="button"
+                          className="button small secondary"
+                          onClick={() => editApi(api)}
+                        >
+                          <Pencil size={14} /> Edit
+                        </button>
+                        <button
                           className="button small secondary"
                           disabled={checkingId === api.id}
                           onClick={() => runCheck(api.id)}
@@ -594,6 +708,13 @@ function App() {
                           {checkingId === api.id
                             ? "Checking..."
                             : "Check now"}
+                        </button>
+                        <button
+                          type="button"
+                          className="button small secondary"
+                          onClick={() => deleteApi(api.id, api.name)}
+                        >
+                          <Trash2 size={14} /> Delete
                         </button>
                       </td>
                     </tr>
