@@ -45,7 +45,7 @@ jobs:
         working-directory: backend
 
     env:
-      DATABASE_URL: postgresql+psycopg2://postgres:postgres@localhost:5432/cloudpulse_test
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/cloudpulse_test
       REDIS_URL: redis://localhost:6379/0
       SECRET_KEY: ci-only-test-secret-key-not-for-production
       SMTP_HOST: localhost

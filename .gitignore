@@ -21,3 +21,22 @@ dist/
 .vscode/
 .idea/
 *.log
+
+# Additional Python tooling
+.mypy_cache/
+.ruff_cache/
+ENV/
+
+# Frontend build and package logs
+frontend/dist/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local backup files
+*.bak
+*.backup
+
+# Operating system files
+.DS_Store
+Thumbs.db
