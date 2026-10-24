@@ -5,6 +5,22 @@ CloudPulse is a full-stack API monitoring platform that periodically checks regi
 
 The project combines a React frontend, FastAPI backend, PostgreSQL database, Redis message broker, and Celery background workers to demonstrate API monitoring and incident management.
 
+
+## Dashboard Preview
+
+### Monitoring Overview
+
+![CloudPulse Monitoring Dashboard](docs/screenshots/dashboard.png)
+
+CloudPulse dashboard showing monitored API counts, healthy and failing endpoints, and open incidents.
+
+### Response Times and Monitored APIs
+
+![CloudPulse Response Times and Monitored APIs](docs/screenshots/monitored-apis.png)
+
+View response-time trends, endpoint health, monitoring intervals, and endpoint management actions.
+
+
 ## Features
 
 - **API Management:** Register and manage monitored API endpoints.
