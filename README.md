@@ -1,4 +1,5 @@
 # CloudPulse — API Monitoring and Incident Management Platform
+![Backend Tests](https://github.com/Subbu3699/CloudPulse/actions/workflows/backend-tests.yml/badge.svg)
 
 CloudPulse is a full-stack API monitoring platform that periodically checks registered endpoints, records HTTP status codes and response times, detects failures, manages incidents, and sends email notifications.
 
