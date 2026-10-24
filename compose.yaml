@@ -24,7 +24,7 @@ services:
       REDIS_URL: redis://redis:6379/0
       RUNNING_IN_DOCKER: "true"
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -67,6 +67,6 @@ services:
     container_name: cloudpulse-frontend
     restart: unless-stopped
     ports:
-      - "5173:80"
+      - "127.0.0.1:5173:80"
     depends_on:
       - backend
