@@ -1,4 +1,5 @@
 
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -8,17 +9,27 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal, test_db_connection
 from app.models import Incident, MonitoredAPI, MonitoringCheck
 from app.monitor import run_api_check
-from app.scheduler import start_scheduler, stop_scheduler
+from app.scheduler import scheduler, start_scheduler, stop_scheduler
 from app.schemas import MonitoredAPICreate, MonitoredAPIResponse
+
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger.warning("CloudPulse lifespan starting")
+
     start_scheduler()
+
+    logger.warning("Scheduler running: %s", scheduler.running)
+    logger.warning("Scheduler jobs: %s", scheduler.get_jobs())
+
     try:
         yield
     finally:
         stop_scheduler()
+        logger.warning("CloudPulse lifespan stopped")
 
 
 app = FastAPI(
@@ -80,6 +91,7 @@ def database_health_check():
         raise RuntimeError("Unexpected database response")
 
     except Exception:
+        logger.exception("Database health check failed")
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection failed",
