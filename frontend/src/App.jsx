@@ -27,7 +27,7 @@ import {
 import "./App.css";
 
 const API = axios.create({
-  baseURL: "http://127.0.0.1:8000",
+  baseURL: import.meta.env.VITE_API_URL || "http://127.0.0.1:8000",
 });
 
 function App() {
@@ -751,3 +751,4 @@ function StatCard({ title, value, icon, tone, detail }) {
 }
 
 export default App;
+
